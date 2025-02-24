@@ -49,6 +49,7 @@ type customSort struct {
 	IgnoreSpaces      bool
 	CheckSorted       bool
 	NumericWithSuffix bool
+	Filename          string
 }
 
 func (cs *customSort) Len() int {
@@ -157,6 +158,14 @@ func parseFlags() *customSort {
 	flag.BoolVar(&data.NumericWithSuffix, "h", false, "Числовая сортировка с учетом суффиксов (K, M, G и т. д.)")
 
 	flag.Parse()
+
+	args := flag.Args()
+	if len(args) != 1 {
+		log.Fatal("Необходимо указать имя файла")
+	}
+
+	data.Filename = args[0]
+
 	return data
 }
 
@@ -207,8 +216,9 @@ func sortAndPrint(data *customSort) {
 	}
 }
 
-func mySort(filename string) {
+func mySort() {
 	data := parseFlags()
+	filename := data.Filename
 
 	lines, err := readLines(filename, data.IgnoreSpaces)
 	if err != nil {
@@ -225,6 +235,8 @@ func mySort(filename string) {
 }
 
 func main() {
-	mySort("test1") // числа
-	//mySort("test2") // месяцы
+	// Пример запуска
+	// go run task.go -h test1
+	// go run task.go -M test2
+	mySort()
 }
