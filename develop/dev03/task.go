@@ -52,15 +52,15 @@ type customSort struct {
 	Filename          string
 }
 
-func (cs *customSort) Len() int {
+func (cs customSort) Len() int {
 	return len(cs.Lines)
 }
 
-func (cs *customSort) Swap(i, j int) {
+func (cs customSort) Swap(i, j int) {
 	cs.Lines[i], cs.Lines[j] = cs.Lines[j], cs.Lines[i]
 }
 
-func (cs *customSort) Less(i, j int) bool {
+func (cs customSort) Less(i, j int) bool {
 	fieldsI := strings.Fields(cs.Lines[i])
 	fieldsJ := strings.Fields(cs.Lines[j])
 
@@ -133,7 +133,7 @@ func parseWithSuffix(s string) float64 {
 }
 
 // removeDuplicates удаляет дубликаты из списка строк
-func removeDuplicates(data *customSort) {
+func removeDuplicates(data customSort) {
 	lines := make(map[string]struct{})
 	var uniqueLines []string
 	for _, line := range data.Lines {
@@ -146,25 +146,26 @@ func removeDuplicates(data *customSort) {
 }
 
 // parseFlags считывает аргументы командной строки и возвращает структуру с настройками
-func parseFlags() *customSort {
-	data := &customSort{}
-	flag.IntVar(&data.Column, "k", 1, "Столбец для сортировки (по умолчанию 1)")
-	flag.BoolVar(&data.Numeric, "n", false, "Сортировка по числовому значению")
-	flag.BoolVar(&data.Reverse, "r", false, "Обратная сортировка")
-	flag.BoolVar(&data.Unique, "u", false, "Вывод только уникальных строк")
-	flag.BoolVar(&data.Month, "M", false, "Сортировка по названию месяца")
-	flag.BoolVar(&data.IgnoreSpaces, "b", false, "Игнорировать завершающие пробелы")
-	flag.BoolVar(&data.CheckSorted, "c", false, "Проверить, отсортирован ли файл")
-	flag.BoolVar(&data.NumericWithSuffix, "h", false, "Числовая сортировка с учетом суффиксов (K, M, G и т. д.)")
+func parseFlags(args []string) customSort {
+	fs := flag.NewFlagSet("grep", flag.ExitOnError)
+	data := customSort{}
+	fs.IntVar(&data.Column, "k", 1, "Столбец для сортировки (по умолчанию 1)")
+	fs.BoolVar(&data.Numeric, "n", false, "Сортировка по числовому значению")
+	fs.BoolVar(&data.Reverse, "r", false, "Обратная сортировка")
+	fs.BoolVar(&data.Unique, "u", false, "Вывод только уникальных строк")
+	fs.BoolVar(&data.Month, "M", false, "Сортировка по названию месяца")
+	fs.BoolVar(&data.IgnoreSpaces, "b", false, "Игнорировать завершающие пробелы")
+	fs.BoolVar(&data.CheckSorted, "c", false, "Проверить, отсортирован ли файл")
+	fs.BoolVar(&data.NumericWithSuffix, "h", false, "Числовая сортировка с учетом суффиксов (K, M, G и т. д.)")
 
-	flag.Parse()
+	fs.Parse(args)
 
-	args := flag.Args()
-	if len(args) != 1 {
+	nonFlags := fs.Args()
+	if len(nonFlags) != 1 {
 		log.Fatal("Необходимо указать имя файла")
 	}
 
-	data.Filename = args[0]
+	data.Filename = nonFlags[0]
 
 	return data
 }
@@ -195,7 +196,7 @@ func readLines(filename string, ignoreSpaces bool) ([]string, error) {
 }
 
 // checkIfSorted проверяет, отсортирован ли файл
-func checkIfSorted(data *customSort) {
+func checkIfSorted(data customSort) {
 	if sort.IsSorted(data) {
 		fmt.Println("Файл отсортирован")
 	} else {
@@ -204,7 +205,7 @@ func checkIfSorted(data *customSort) {
 }
 
 // sortAndPrint выполняет сортировку и выводит результат
-func sortAndPrint(data *customSort) {
+func sortAndPrint(data customSort) {
 	sort.Sort(data)
 
 	if data.Unique {
@@ -216,27 +217,24 @@ func sortAndPrint(data *customSort) {
 	}
 }
 
-func mySort() {
-	data := parseFlags()
-	filename := data.Filename
+func mySort(cfg customSort) {
+	filename := cfg.Filename
 
-	lines, err := readLines(filename, data.IgnoreSpaces)
+	lines, err := readLines(filename, cfg.IgnoreSpaces)
 	if err != nil {
 		log.Fatal(err)
 	}
-	data.Lines = lines
+	cfg.Lines = lines
 
-	if data.CheckSorted {
-		checkIfSorted(data)
+	if cfg.CheckSorted {
+		checkIfSorted(cfg)
 		return
 	}
 
-	sortAndPrint(data)
+	sortAndPrint(cfg)
 }
 
 func main() {
-	// Пример запуска
-	// go run task.go -h test1
-	// go run task.go -M test2
-	mySort()
+	cfg := parseFlags(os.Args[1:])
+	mySort(cfg)
 }
